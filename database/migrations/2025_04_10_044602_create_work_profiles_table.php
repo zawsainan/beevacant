@@ -22,7 +22,7 @@ return new class extends Migration
             $table->json('skills')->nullable();
             $table->string('profile_picture');
             $table->date('birthday');
-            $table->string('phone_number', 10);
+            $table->string('phone_number', 13);
             $table->string('profession');
             $table->timestamps();
         });
