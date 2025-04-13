@@ -229,7 +229,7 @@ class JobController extends Controller implements HasMiddleware
         $jobs = $request->user()->company->jobs;
         if ($jobs->isEmpty()) return response()->json([
             'message' => "You haven't posted a job yet."
-        ], 404);
+        ], 200);
         return response()->json([
             'jobs' => $jobs
         ], 200);
@@ -240,7 +240,7 @@ class JobController extends Controller implements HasMiddleware
         $jobs = $request->user()->company->jobs()->onlyTrashed()->get();
         if ($jobs->isEmpty()) return response()->json([
             'message' => "You haven't posted a job yet."
-        ], 404);
+        ], 200);
         return response()->json([
             'jobs' => $jobs
         ], 200);

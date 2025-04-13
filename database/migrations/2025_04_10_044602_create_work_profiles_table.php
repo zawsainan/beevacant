@@ -20,7 +20,7 @@ return new class extends Migration
             $table->integer('expected_salary')->nullable();
             $table->text('overview')->nullable();
             $table->json('skills')->nullable();
-            $table->string('profile_picture');
+            $table->string('profile_picture')->nullable();
             $table->date('birthday');
             $table->string('phone_number', 13);
             $table->string('profession');
