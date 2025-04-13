@@ -2,11 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\WorkProfile;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class WorkProfileController extends Controller
 {
+    public function index(Request $request)
+    {
+        if ($request->user()->role == "admin") {
+            return WorkProfile::paginate(10);
+        }
+        return response()->json([
+            'message' => 'Only Admins can view all work profiles'
+        ], 403);
+    }
+
     public function show(Request $request)
     {
         if ($request->user()->role == 'job_seeker') {
