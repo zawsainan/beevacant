@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreignIdFor(User::class)->constrained()->cascadeOnDelete();
             $table->enum('status', ['applied', 'interview', 'rejected'])->default('applied');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -9,6 +9,10 @@ class WorkProfile extends Model
 {
     /** @use HasFactory<\Database\Factories\WorkProfileFactory> */
     use HasFactory;
+    protected $guarded = [];
+    protected $casts = [
+        'skills' => 'array',
+    ];
 
     public function user()
     {
