@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->enum('role', ['recruiter', 'job_seeker']);
+            $table->enum('role', ['recruiter', 'job_seeker', 'admin']);
             $table->softDeletes();
             $table->boolean('banned')->default(false);
             $table->timestamps();
