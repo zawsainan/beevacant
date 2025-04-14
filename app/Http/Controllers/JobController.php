@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Job;
+use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -70,15 +71,19 @@ class JobController extends Controller implements HasMiddleware
             'schedule' => ['required', Rule::in(['Part Time', 'Full Time'])],
             'location' => ['required', 'string'],
             'url' => ['required', 'url'],
-            'featured' => ['required', 'boolean']
+            'featured' => ['required', 'boolean'],
+            'tags' => ['required', 'string']
         ]);
 
         $attributes['company_id'] = $request->user()->company->id;
         $job = Job::create($attributes);
 
+        $tagNames = collect(explode(',', $request['tags']))->map(fn($tag) => trim($tag))->filter()->unique();
+        $tags = $tagNames->map(fn($tagName) => Tag::firstOrCreate(['name' => $tagName]));
+        $job->tags()->sync($tags->pluck('id'));
         return [
             'message' => 'Job posted successfully.',
-            'job' => $job
+            'job' => $job->load('tags')
         ];
     }
 
