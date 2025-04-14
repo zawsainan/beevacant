@@ -39,7 +39,7 @@ class CompanyController extends Controller
         ], 200);
     }
 
-    public function create(Request $request)
+    public function store(Request $request)
     {
         if ($request->user()->role != 'recruiter') {
             return response()->json([

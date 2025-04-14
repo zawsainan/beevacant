@@ -7,6 +7,7 @@ use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -47,7 +48,7 @@ class JobController extends Controller implements HasMiddleware
      */
     public function show(Job $job)
     {
-        return $job;
+        return $job->load('tags');
     }
 
     /**
@@ -64,27 +65,39 @@ class JobController extends Controller implements HasMiddleware
             ], 403);
         }
 
-        $attributes = $request->validate([
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'salary_range' => ['nullable', 'string', 'max:255'],
-            'schedule' => ['required', Rule::in(['Part Time', 'Full Time'])],
-            'location' => ['required', 'string'],
-            'url' => ['required', 'url'],
-            'featured' => ['required', 'boolean'],
-            'tags' => ['required', 'string']
-        ]);
+        DB::beginTransaction();
+        try {
+            $attributes = $request->validate([
+                'category_id' => ['required', 'integer', 'exists:categories,id'],
+                'title' => ['required', 'string', 'max:255'],
+                'salary_range' => ['nullable', 'string', 'max:255'],
+                'schedule' => ['required', Rule::in(['Part Time', 'Full Time'])],
+                'location' => ['required', 'string'],
+                'url' => ['required', 'url'],
+                'featured' => ['required', 'boolean']
+            ]);
 
-        $attributes['company_id'] = $request->user()->company->id;
-        $job = Job::create($attributes);
+            $tagValidation = $request->validate(['tags' => ['required', 'string']]);
 
-        $tagNames = collect(explode(',', $request['tags']))->map(fn($tag) => trim($tag))->filter()->unique();
-        $tags = $tagNames->map(fn($tagName) => Tag::firstOrCreate(['name' => $tagName]));
-        $job->tags()->sync($tags->pluck('id'));
-        return [
-            'message' => 'Job posted successfully.',
-            'job' => $job->load('tags')
-        ];
+            $attributes['company_id'] = $request->user()->company->id;
+            $job = Job::create($attributes);
+
+            $tagNames = collect(explode(',', $tagValidation['tags']))->map(fn($tag) => trim($tag))->filter()->unique();
+            $tags = $tagNames->map(fn($tagName) => Tag::firstOrCreate(['name' => $tagName]));
+            $job->tags()->sync($tags->pluck('id'));
+
+            DB::commit();
+
+            return [
+                'message' => 'Job posted successfully.',
+                'job' => $job->load('tags')
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -108,22 +121,38 @@ class JobController extends Controller implements HasMiddleware
             ], 403);
         }
 
-        $attributes = $request->validate([
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'salary_range' => ['nullable', 'string', 'max:255'],
-            'schedule' => ['required', Rule::in(['Part Time', 'Full Time'])],
-            'location' => ['required', 'string'],
-            'url' => ['required', 'url'],
-            'featured' => ['required', 'boolean']
-        ]);
+        try {
+            DB::beginTransaction();
+            $attributes = $request->validate([
+                'category_id' => ['required', 'integer', 'exists:categories,id'],
+                'title' => ['required', 'string', 'max:255'],
+                'salary_range' => ['nullable', 'string', 'max:255'],
+                'schedule' => ['required', Rule::in(['Part Time', 'Full Time'])],
+                'location' => ['required', 'string'],
+                'url' => ['required', 'url'],
+                'featured' => ['required', 'boolean'],
+                'tags' => ['required', 'string']
+            ]);
+            $tagValidation = $attributes['tags'];
+            unset($attributes['tags']);
+            $job->update($attributes);
 
-        $job->update($attributes);
+            $tagNames = collect(explode(',', $tagValidation))->map(fn($tagName) => trim($tagName))->filter()->unique();
+            $tags = $tagNames->map(fn($tagName) => Tag::firstOrCreate(['name' => $tagName]));
+            $job->tags()->sync($tags->pluck('id'));
 
-        return [
-            'message' => 'Job updated successfully.',
-            'job' => $job
-        ];
+            DB::commit();
+
+            return [
+                'message' => 'Job updated successfully.',
+                'job' => $job
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -224,7 +253,7 @@ class JobController extends Controller implements HasMiddleware
         $job->forceDelete();
 
         return response([
-            'message' => 'Job restored successfully.',
+            'message' => 'Job deleted permenantly.',
             'job' => $job
         ], 200);
     }

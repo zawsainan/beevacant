@@ -10,6 +10,7 @@ class Job extends Model
 {
     /** @use HasFactory<\Database\Factories\JobFactory> */
     use HasFactory, SoftDeletes;
+    protected $guarded = [];
 
     public function company()
     {

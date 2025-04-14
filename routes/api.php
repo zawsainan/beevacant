@@ -23,3 +23,6 @@ Route::apiResource('jobs', JobController::class);
 
 Route::post('/jobs/{id}/restore', [JobController::class, 'restore']);
 Route::post('/jobs/{id}/force-delete', [JobController::class, 'forceDelete']);
+
+Route::get('/my-jobs', [JobController::class, 'myJobs'])->middleware('auth:sanctum');
+Route::get('/my-deleted-jobs', [JobController::class, 'myDeletedJobs'])->middleware('auth:sanctum');
