@@ -10,6 +10,7 @@ class Company extends Model
     /** @use HasFactory<\Database\Factories\CompanyFactory> */
     use HasFactory;
     protected $guarded = [];
+    protected $casts = ['is_banned' => 'boolean'];
 
     public function user()
     {

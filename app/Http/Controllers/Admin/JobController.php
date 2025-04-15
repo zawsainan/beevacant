@@ -14,7 +14,7 @@ class JobController extends Controller
     {
         $jobs = Job::withTrashed()->groupBy('deleted_at')->get();
 
-        return response()->json(['jobs' => $jobs], 200);
+        return response()->json(['jobs' => $jobs[0], 'deletedJobs' => $jobs[1]], 200);
     }
 
     // restore a soft-deleted job

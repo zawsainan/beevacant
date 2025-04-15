@@ -16,6 +16,7 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(User::class)->constrained()->onDelete('cascade');
             $table->string('name');
+            $table->boolean('is_banned')->default(false);
             $table->string('logo')->nullable();
             $table->text('profile');
             $table->timestamps();

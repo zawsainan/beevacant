@@ -10,31 +10,38 @@ class WorkProfileController extends Controller
 {
     public function index(Request $request)
     {
-        if ($request->user()->role == "admin") {
+        if (in_array($request->user()->role, ['admin', 'recruiter'])) {
             return WorkProfile::paginate(10);
         }
         return response()->json([
-            'message' => 'Only Admins can view all work profiles'
+            'message' => 'Only Admins and recruiters can view all work profiles'
         ], 403);
+    }
+
+    public function view($id)
+    {
+        $profile = WorkProfile::find($id);
+        if (!$profile) {
+            return response()->json([
+                'message' => "Profile Not found"
+            ], 404);
+        }
+        return response()->json([
+            'profile' => $profile
+        ], 200);
     }
 
     public function show(Request $request)
     {
-        if ($request->user()->role == 'job_seeker') {
-
-            $profile = $request->user()->workprofile;
-            if (!$profile) {
-                return response()->json([
-                    'message' => "Profile Not found"
-                ], 404);
-            }
+        $profile = $request->user()->workprofile;
+        if (!$profile) {
             return response()->json([
-                'profile' => $profile
-            ], 200);
+                'message' => "Profile Not found"
+            ], 404);
         }
         return response()->json([
-            'message' => "Unauthorized. Only job seekers can view their profile"
-        ], 403);
+            'profile' => $profile
+        ], 200);
     }
 
     public function update(Request $request)
@@ -58,7 +65,7 @@ class WorkProfileController extends Controller
         ], 200);
     }
 
-    public function destroy(Request $request)
+    public function toggleActivate(Request $request)
     {
         $profile = $request->user()->workprofile;
         if (!$profile) {
@@ -66,14 +73,10 @@ class WorkProfileController extends Controller
                 'message' => 'Profile Not Found'
             ], 404);
         }
-        if ($profile->user_id !== $request->user()->id) {
-            return response()->json([
-                'message' => 'Unauthorized. You cannot delete this profile'
-            ], 403);
-        }
-        $profile->delete();
+        $profile->is_active = !$profile->is_active;
+        $profile->save();
         return response()->json([
-            'message' => 'Profile deleted successfully.'
+            'message' => 'Profile ' . ($profile->is_active ? 'activate' : 'deactivate')  . ' successfully.'
         ], 200);
     }
 }

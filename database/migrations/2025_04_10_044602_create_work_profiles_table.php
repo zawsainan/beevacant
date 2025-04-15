@@ -24,6 +24,7 @@ return new class extends Migration
             $table->date('birthday');
             $table->string('phone_number', 13);
             $table->string('profession');
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

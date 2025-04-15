@@ -12,6 +12,7 @@ class WorkProfile extends Model
     protected $guarded = [];
     protected $casts = [
         'skills' => 'array',
+        'is_active' => 'boolean'
     ];
 
     public function user()
