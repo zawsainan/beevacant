@@ -5,65 +5,31 @@ namespace App\Http\Controllers;
 use App\Models\Job;
 use App\Models\Tag;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
-/**
- * Class JobController
- *
- * Controller for handling job postings.
- * Only authenticated users with the "recruiter" role can create, update, delete, restore, or permanently delete jobs.
- */
-class JobController extends Controller implements HasMiddleware
+class JobController extends Controller
 {
-    /**
-     * Define middleware for the controller.
-     *
-     * @return array
-     */
-    public static function middleware()
-    {
-        return [
-            new Middleware('auth:sanctum', except: ['index', 'show'])
-        ];
-    }
 
-    /**
-     * Display a listing of all jobs.
-     *
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
+    // show all jobs
     public function index()
     {
-        return Job::all();
+        return response()->json([
+            'jobs' => Job::with(['tags'])->latest()->paginate()
+        ], 200);
     }
 
-    /**
-     * Display the specified job.
-     *
-     * @param Job $job
-     * @return Job
-     */
+    // show single job with tags
     public function show(Job $job)
     {
-        return $job->load('tags');
+        return response()->json([
+            'job' => $job->load('tags')
+        ], 200);
     }
 
-    /**
-     * Store a newly created job in storage.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse|array
-     */
+    // create a new job
     public function store(Request $request)
     {
-        if ($request->user()->role != "recruiter") {
-            return response()->json([
-                'message' => 'Unauthorized. Only recruiters can post jobs.'
-            ], 403);
-        }
 
         DB::beginTransaction();
         try {
@@ -88,37 +54,21 @@ class JobController extends Controller implements HasMiddleware
 
             DB::commit();
 
-            return [
+            return response()->json([
                 'message' => 'Job posted successfully.',
                 'job' => $job->load('tags')
-            ];
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response([
-                'message' => $e->getMessage()
-            ]);
+            return response()->json(['message' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Update the specified job.
-     *
-     * @param Request $request
-     * @param Job $job
-     * @return \Illuminate\Http\JsonResponse|array
-     */
+    // update a job
     public function update(Request $request, Job $job)
     {
-        if ($request->user()->role != "recruiter") {
-            return response()->json([
-                'message' => 'Unauthorized. Only recruiters can update jobs.'
-            ], 403);
-        }
-
         if ($request->user()->id != $job->company->user->id) {
-            return response()->json([
-                'message' => 'Unauthoried. You can edit only your own jobs.'
-            ], 403);
+            return response()->json(["message" => "Unauthorized Action! You do not have permission to modify this job listing."], 403);
         }
 
         try {
@@ -133,8 +83,10 @@ class JobController extends Controller implements HasMiddleware
                 'featured' => ['required', 'boolean'],
                 'tags' => ['required', 'string']
             ]);
+
             $tagValidation = $attributes['tags'];
             unset($attributes['tags']);
+
             $job->update($attributes);
 
             $tagNames = collect(explode(',', $tagValidation))->map(fn($tagName) => trim($tagName))->filter()->unique();
@@ -143,140 +95,41 @@ class JobController extends Controller implements HasMiddleware
 
             DB::commit();
 
-            return [
+            return response()->json([
                 'message' => 'Job updated successfully.',
                 'job' => $job
-            ];
+            ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response([
-                'message' => $e->getMessage()
-            ]);
+            return response()->json(['message' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Soft delete the specified job.
-     *
-     * @param Request $request
-     * @param Job $job
-     * @return \Illuminate\Http\JsonResponse|array
-     */
+    // soft delete a job
     public function destroy(Request $request, Job $job)
     {
-        if ($request->user()->role != "recruiter") {
-            return response()->json([
-                'message' => 'Unauthorized. Only recruiters can delete jobs.'
-            ], 403);
-        }
 
         if ($request->user()->id != $job->company->user->id) {
-            return response()->json([
-                'message' => 'Unauthoried. You can delete only your own jobs.'
-            ], 403);
+            return response()->json(["message" => "Unauthorized Action! You do not have permission to delete this job listing."], 403);
         }
 
         $job->delete();
 
-        return [
+        return response()->json([
             'message' => 'Job deleted successfully.',
             'job' => $job
-        ];
-    }
-
-    /**
-     * Restore a soft-deleted job.
-     *
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\Response
-     */
-    public function restore(Request $request, $id)
-    {
-        if ($request->user()->role != "recruiter") {
-            return response()->json([
-                'message' => 'Unauthorized. Only recruiters can restore jobs.'
-            ], 403);
-        }
-
-        $job = Job::withTrashed()->find($id);
-
-        if (!$job) {
-            return response([
-                'message' => 'Job Not found'
-            ], 404);
-        }
-
-        if ($request->user()->id != $job->company->user->id) {
-            return response()->json([
-                'message' => 'Unauthoried. You can restore only your own jobs.'
-            ], 403);
-        }
-
-        $job->restore();
-
-        return response([
-            'message' => 'Job restored successfully.',
-            'job' => $job
         ], 200);
     }
 
-    /**
-     * Permanently delete the specified soft-deleted job.
-     *
-     * @param Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\Response
-     */
-    public function forceDelete(Request $request, $id)
-    {
-        if ($request->user()->role != "recruiter") {
-            return response()->json([
-                'message' => 'Unauthorized. Only recruiters can delete jobs.'
-            ], 403);
-        }
-
-        $job = Job::withTrashed()->find($id);
-
-        if (!$job) {
-            return response([
-                'message' => 'Job Not found'
-            ], 404);
-        }
-
-        if ($request->user()->id != $job->company->user->id) {
-            return response()->json([
-                'message' => 'Unauthoried. You can delete only your own jobs.'
-            ], 403);
-        }
-
-        $job->forceDelete();
-
-        return response([
-            'message' => 'Job deleted permenantly.',
-            'job' => $job
-        ], 200);
-    }
-    //getting a recruiter's posted jobs
+    // get recruiter's active jobs
     public function myJobs(Request $request)
     {
         $jobs = $request->user()->company->jobs;
-        if ($jobs->isEmpty()) return response()->json([
-            'message' => "You haven't posted a job yet."
-        ], 200);
-        return response()->json([
-            'jobs' => $jobs
-        ], 200);
+        if ($jobs->isEmpty()) {
+            return response()->json(['message' => "You haven't posted a job yet."], 200);
+        }
+
+        return response()->json(['jobs' => $jobs], 200);
     }
-    //getting a recruiter's soft deleted jobs
-    public function myDeletedJobs(Request $request)
-    {
-        $jobs = $request->user()->company->jobs()->onlyTrashed()->get();
-        if ($jobs->isEmpty()) return response()->json([
-            'message' => "You haven't posted a job yet."
-        ], 200);
-        return response()->json([
-            'jobs' => $jobs
-        ], 200);
-    }
+
 }
