@@ -16,7 +16,6 @@ class SessionController extends Controller
 
     public function store(Request $request)
     {
-        //Validate User Attributes
         $credentials = $request->validate([
             'email' => 'required|email',
             'password' => 'required'
@@ -27,15 +26,12 @@ class SessionController extends Controller
                 'password' => 'Sorry, those credentials are incorrect'
             ]);
         }
-        // Get the authenticated user
         $user = Auth::user();
 
         $request->session()->regenerate();
-        // Check user's role and redirect
         if ($user->role === 'admin') {
             return redirect()->route('admin.dashboard');
         }
-        // default fallback
         return redirect()->route('home');
     }
 

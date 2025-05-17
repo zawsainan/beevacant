@@ -17,14 +17,12 @@ class RegisteredRecruiterController extends Controller
 
     public function store(Request $request)
     {
-        // Validate user attributes
         $userAttributes = $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users',
             'password' => 'required|confirmed'
         ]);
 
-        // Validate company attributes
         $companyAttributes = $request->validate([
             'company' => ['required', 'max:255'],
             'logo' => ['required', 'mimes:jpg,png,webp,svg'],
@@ -38,15 +36,12 @@ class RegisteredRecruiterController extends Controller
 
         try {
 
-            // Store logo and get its path
             $logoPath = $companyAttributes['logo']->store('logos', 'public');
 
-            // Create the user with the 'recruiter' role
             $userAttributes['role'] = 'recruiter';
             $userAttributes['password'] = bcrypt($userAttributes['password']);
             $user = User::create($userAttributes);
 
-            // Create the company associated with the user
             $user->company()->create([
                 'name' => $companyAttributes['company'],
                 'logo' => $logoPath,
@@ -63,9 +58,7 @@ class RegisteredRecruiterController extends Controller
 
             return redirect("/");
         } catch (\Exception $e) {
-            // Rollback the transaction in case of an error
             DB::rollBack();
-            //Log the error for debugging purposes
             Log::error($e->getMessage(), ['exception' => $e]);
             return redirect()->back()->with([
                 'error' => 'Something went wrong. Please try again'
